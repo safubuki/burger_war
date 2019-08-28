@@ -24,31 +24,6 @@ import os   # file path
 import tf
 from geometry_msgs.msg import Quaternion
 
-# Add ImageProcessing --- START ---
-# use LaserScan
-from sensor_msgs.msg import LaserScan
-
-# use Camera
-from sensor_msgs.msg import Image
-from cv_bridge import CvBridge, CvBridgeError
-import cv2
-import numpy as np
-
-# Image Process function
-import imgProc        #function
-from imgProc import * #class
-
-# Add ImageProcessing --- END ---
-
-import math
-from tf import TransformListener
-from geometry_msgs.msg import PointStamped
-from visualization_msgs.msg import Marker, MarkerArray
-
-camera_fov = 50.0
-camera_width = 640.0
-
-
 # PythonでEnum的なことを実現
 class MoveState():
     STOP         = 0
@@ -78,29 +53,6 @@ class RirakkumaBot():
         self.pub_goal        = rospy.Publisher('move_base_simple/goal', PoseStamped, queue_size=1, latch=True)
         ### Subscriber を ROS Masterに登録
         self.sub_goal_result = rospy.Subscriber("move_base/result", MoveBaseActionResult, self.result_callback, queue_size=1)
-                # Add ImageProcessing --- START ---
-        # lidar scan subscriber
-        self.scan = LaserScan()
-        self.lidar_sub = rospy.Subscriber('scan', LaserScan, self.lidarCallback)
-
-        # camera subscribver
-        # for convert image topic to opencv obj
-        self.img = None
-        self.camera_preview = True
-        self.bridge = CvBridge()
-        self.image_sub = rospy.Subscriber('image_raw', Image, self.imageCallback)
-        #self.image_sub = rospy.Subscriber('/red_bot/image_raw', Image, self.imageCallback)
-
-        #cImgProc instance
-        self.proc = cImgProc()
-        # Add ImageProcessing --- END ---
-
-        # tf
-        self._tf_listener = tf.TransformListener()
-        # Marker
-        self.marker_pub = rospy.Publisher('enemy_position', Marker, queue_size = 1)
-        # greenflag
-        self.greenflag = 0
 
     # CSVファイルから座標を取得する関数
     def csv_data(self):
@@ -225,140 +177,6 @@ class RirakkumaBot():
             print('move_state')  # ★★デバッグ
             print(self.move_state)
             rospy.sleep(1)  # 1秒Wait
-
-    # Add ImageProcessing --- START ---
-    def lidarCallback(self, data):
-        self.scan = data
-
-    # camera image call back sample
-    def imageCallback(self, data):
-        # comvert image topic to opencv object
-        try:
-            self.img = self.bridge.imgmsg_to_cv2(data, "bgr8")
-        except CvBridgeError as e:
-            print(e)
-
-        # image processing
-        self.proc.imageProcess1(self.img, self.scan)
-        #print('cwd=', self.proc.cwd)
-
-        if self.proc.debug_view == 1:
-            cv2.imshow("Camera", self.proc.img_div2)            
-            cv2.waitKey(1)
-
-        if self.proc.debug_view == 2:
-            #cv2.imshow('rila', self.proc.rila_img)
-            #cv2.imshow("div2", self.proc.img_div2)            
-            #cv2.imshow("div8", self.proc.img_div8)
-            #cv2.imshow("red", self.proc.red_img)
-            #cv2.imshow("green", self.proc.green_img)
-            #cv2.imshow("blue", self.proc.blue_img)                        
-            #cv2.imshow("Camera", self.proc.img)            
-            cv2.imshow("debug1", self.proc.debug1_img)                        
-            cv2.waitKey(1)
-        # green_index = self.proc.green_center
-        # if green_index != -1:
-        #     green_distance = self.proc.depth_img.item(0,green_index,0)
-        # else:
-        #     green_distance = 0
-    # Add ImageProcessing --- END ---
-
-    # Add
-        # 緑の検出
-        hsv_img = cv2.cvtColor(self.img, cv2.COLOR_BGR2HSV_FULL)
-        bgrLower = np.array([80, 50, 50])
-        bgrUpper = np.array([110, 255, 255])
-        hsv_mask = cv2.inRange(hsv_img, bgrLower, bgrUpper)
-        rects = []
-        labels, contours, hierarchy = cv2.findContours(hsv_mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
-        for i in range(0, len(contours)):
-            if len(contours[i]) > 0:
-
-                rect = contours[i]
-                x, y, w, h = cv2.boundingRect(rect)
-                rects.append([x,y,w,h])
-        #print(rects)
-        if len(rects) != 0:
-            self.greenflag = 1
-            # rectsから緑全体をもってくる
-            # Max_left = 640.0
-            # Max_right = 0.0
-            # for i in rects:
-            #     if (i[0] - (i[2] / 2.0)) <= Max_left:
-            #         Max_left = (i[0] - (i[2] / 2.0))
-            #     if (i[0] + (i[2] / 2.0)) >= Max_right:
-            #         Max_right = (i[0] + (i[2] / 2.0))
-            # #print(Max_left)
-            # #print(Max_right)
-            # angle_left = (Max_left - (camera_width / 2.0)) * (camera_fov / camera_width)
-            # angle_right = (Max_right - (camera_width / 2.0)) * (camera_fov / camera_width)
-            
-            # robot正面から何度の方向に緑の物体が存在するか計算
-            angle = (rects[0][0] - (camera_width / 2.0)) * (camera_fov / camera_width)
-            print("#####角度#####")
-            print(angle)
-            # rectの大きさまで考慮する必要ありか？
-            # lidarの点群からおおよその距離を算出
-            if angle >= 0:
-                distance = self.scan.ranges[int(angle)]
-            else:
-                distance = self.scan.ranges[int(359 + angle)]
-            print("#####距離#####")
-            print(distance)
-            # robotから見た座標値を算出　前がx軸、左がy軸
-            robot_x = math.cos(math.radians(angle)) * distance
-            robot_y = -math.sin(math.radians(angle)) * distance
-            print("#####x軸######")
-            print(robot_x)
-            print("#####y軸######")
-            print(robot_y)
-            
-            ######要修正######
-            
-            # 地図座標系に変換
-            #listener = tf.TransformListener()
-            #listener.waitForTransform("/red_bot/map","/red_bot/base_footprint",rospy.Time(0),rospy.Duration(4.0))
-            laser_point = PointStamped()
-            laser_point.header.frame_id = "/red_bot/base_link"
-            laser_point.header.stamp = rospy.Time(0)
-            laser_point.point.x = robot_x
-            laser_point.point.y = robot_y
-            laser_point.point.z = 0.0
-            p = PointStamped()
-            p = self._tf_listener.transformPoint("/red_bot/map", laser_point)
-            # 方向と位置をゴールとして指定
-            # 一旦方向は無視して位置でデバッグ
-            print("#####x_map#####")
-            print(p.point.x)
-            print("#####y_map#####")
-            print(p.point.y)
-            #self.setGoal(p.point.x,p.point.y,0)
-            marker_data = Marker()
-            marker_data.header.frame_id = "/red_bot/map"
-            marker_data.header.stamp = rospy.Time.now()
-            marker_data.ns = "text"
-            marker_data.id = 0
-            marker_data.action = Marker.ADD
-            marker_data.type = 9
-            marker_data.text = "Enemy"
-            marker_data.pose.position.x = p.point.x
-            marker_data.pose.position.y = p.point.y
-            marker_data.pose.position.z = 0.0
-            marker_data.pose.orientation.x = 0.0
-            marker_data.pose.orientation.y = 0.0
-            marker_data.pose.orientation.z = 0.0
-            marker_data.pose.orientation.w = 0.0
-            marker_data.color.r = 1.0
-            marker_data.color.g = 0.0
-            marker_data.color.b = 0.0
-            marker_data.color.a = 1.0
-            marker_data.scale.x = 1.0
-            marker_data.scale.y = 0.1
-            marker_data.scale.z = 0.1
-            self.marker_pub.publish(marker_data)
-
-
-    
 
 if __name__ == "__main__":
     rospy.init_node('rirakkuma_node')
