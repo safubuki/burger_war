@@ -10,7 +10,7 @@ class cImgProc():
     def __init__(self):
         print('Init cImgProc')
         # image load
-        self.loadNo = 2  #1:vscode  2:本番
+        self.loadNo = 3  #1:vscode  2:本番  3:実機
         self.load2(self.loadNo)  
         # debug view
         self.debug_view = 2
@@ -24,6 +24,8 @@ class cImgProc():
             self.rila_img = cv2.imread("burger_war/scripts/img_rila_w_80x60.jpg", 1)
         elif num == 2:  #本番
             self.rila_img = cv2.imread("../catkin_ws/src/burger_war/burger_war/scripts/img_rila_w_80x60.jpg", 1)
+        elif num == 3:  #実機
+            self.rila_img = cv2.imread(os.path.dirname(__file__) + "img_rila_w_80x60.jpg", 1)
 
     # image processing main
     def imageProcess1(self, img, scan):
