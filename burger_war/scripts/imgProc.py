@@ -10,10 +10,20 @@ class cImgProc():
     def __init__(self):
         print('Init cImgProc')
         # image load
-        self.loadNo = 3  #1:vscode  2:本番  3:実機
+        self.loadNo = 3  #1:vscode  2:sim本番 3:実機本番
         self.load2(self.loadNo)  
+
         # debug view
         self.debug_view = 2
+
+        # set default value
+        self.blue_center  = -1
+        self.green_center = -1
+        self.red_center   = -1        
+
+        self.blue_center_depth  = 0.0
+        self.green_center_depth = 0.0
+        self.red_center_depth   = 0.0         
 
     def load2(self, num):
         # Get current work directory
@@ -22,10 +32,10 @@ class cImgProc():
 
         if num == 1:    #vscode debug
             self.rila_img = cv2.imread("burger_war/scripts/img_rila_w_80x60.jpg", 1)
-        elif num == 2:  #本番
+        elif num == 2:  #sim本番
             self.rila_img = cv2.imread("../catkin_ws/src/burger_war/burger_war/scripts/img_rila_w_80x60.jpg", 1)
-        elif num == 3:  #実機
-            self.rila_img = cv2.imread(os.path.dirname(__file__) + "img_rila_w_80x60.jpg", 1)
+        elif num == 3:  #実機本番
+            self.rila_img = cv2.imread(os.path.dirname(__file__) + "/img_rila_w_80x60.jpg", 1)
 
     # image processing main
     def imageProcess1(self, img, scan):
@@ -40,7 +50,7 @@ class cImgProc():
         self.img_div2 = cv2.resize(img, (w/2, h/2))
 
         # Get 1/8 image (80x60)        
-        self.img_div8 = cv2.resize(img, (w/8, h/8))
+        self.img_div8 = cv2.resize(img, (w/8, h/8))        
 
         # -----------------------------------------------------------
         #【python/OpenCV】画像の特定の色を抽出する方法
@@ -83,6 +93,7 @@ class cImgProc():
             if MaxS < s:
                 # 更新
                 MaxNo = i
+                MaxS  = s
         # 最大面積の外接矩形を描画
         if -1 < MaxNo:
             i = MaxNo
@@ -106,7 +117,7 @@ class cImgProc():
         # -------------------------------------------------------------------------------------
         # ラベリング参考: http://okkah.hateblo.jp/entry/2018/08/02/163045        
         MaxNo = -1  #初期番号
-        MaxS  = 3  #初期面積
+        MaxS  = 8  #初期面積
         # Blueのmaskをラベリング
         label = cv2.connectedComponentsWithStats(self.green_mask)
         # オブジェクト毎に情報抽出
@@ -120,6 +131,7 @@ class cImgProc():
             if MaxS < s:
                 # 更新
                 MaxNo = i
+                MaxS  = s
         # 最大面積の外接矩形を描画
         if -1 < MaxNo:
             i = MaxNo
@@ -143,7 +155,7 @@ class cImgProc():
         # -------------------------------------------------------------------------------------
         # ラベリング参考: http://okkah.hateblo.jp/entry/2018/08/02/163045        
         MaxNo = -1  #初期番号
-        MaxS  = 1  #初期面積
+        MaxS  = 3  #初期面積
         # Blueのmaskをラベリング
         label = cv2.connectedComponentsWithStats(self.red_mask)
         # オブジェクト毎に情報抽出
@@ -157,6 +169,7 @@ class cImgProc():
             if MaxS < s:
                 # 更新
                 MaxNo = i
+                MaxS  = s
         # 最大面積の外接矩形を描画
         if -1 < MaxNo:
             i = MaxNo
@@ -227,6 +240,23 @@ class cImgProc():
 
         # 中央付近の平均距離を格納
         self.center_depth = (scan.ranges[359-10] + scan.ranges[359-5] + scan.ranges[0] + scan.ranges[5] + scan.ranges[10])/5
+
+        # blue,green,red_centerの距離を算出(m)
+        if self.blue_center != -1:
+            self.blue_center_depth = float(self.depth_img.item(0, self.blue_center, 0)) / 100
+        else:
+            self.blue_center_depth = 0
+
+        if self.green_center != -1:
+            self.green_center_depth = float(self.depth_img.item(0, self.green_center, 0)) / 100
+        else:
+            self.green_center_depth = 0 
+
+        if self.red_center != -1:
+            self.red_center_depth = float(self.depth_img.item(0, self.red_center, 0)) / 100
+        else:
+            self.red_center_depth = 0
+        print("b,g,r_depth =", self.blue_center_depth, self.green_center_depth, self.red_center_depth)                              
 
         # debug (中心付近に10x10の赤枠描画)
         cv2.rectangle(self.depth_img, (40-5,30-5), (40+5, 30+5), (0,0,255), 2)

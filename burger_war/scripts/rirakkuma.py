@@ -45,6 +45,9 @@ from tf import TransformListener
 from geometry_msgs.msg import PointStamped
 from visualization_msgs.msg import Marker, MarkerArray
 
+import actionlib
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+
 #camera_fov = 50.0
 #camera_width = 640.0
 
@@ -101,6 +104,8 @@ class RirakkumaBot():
         #self.marker_pub = rospy.Publisher('enemy_position', Marker, queue_size = 1)
         # greenflag
         #self.greenflag = 0
+
+        self.client = actionlib.SimpleActionClient('move_base',MoveBaseAction)
 
 
     def calcTwist_rand(self):
@@ -292,10 +297,12 @@ class RirakkumaBot():
         # 起動直後ウェイト
         rospy.sleep(1.0)  # 起動後、ウェイト（調整値）
         while not rospy.is_shutdown():
-            if(self.greenflag == 1):
+            if(self.proc.green_center != -1):
+                self.client.cancel_goal()
+                twist = self.calcTwist_center(self.proc.green_center, self.proc.center_depth)
+                #print(twist)
+                self.vel_pub.publish(twist)
                 print("snipe_enemy")
-                if(self.move_state == MoveState.STOP):
-                    self.greenflag = 0
             elif self.move_state == MoveState.STOP:
                 pos_info = self.c_data[self.c_data_cnt]
                 if pos_info[3] == "way_point":
