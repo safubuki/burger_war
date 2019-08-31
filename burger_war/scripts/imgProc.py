@@ -23,7 +23,11 @@ class cImgProc():
 
         self.blue_center_depth  = 0.0
         self.green_center_depth = 0.0
-        self.red_center_depth   = 0.0         
+        self.red_center_depth   = 0.0
+
+        self.blue_center_S  = 0
+        self.green_center_S = 0
+        self.red_center_S   = 0                  
 
     def load2(self, num):
         # Get current work directory
@@ -96,6 +100,8 @@ class cImgProc():
                 MaxS  = s
         # 最大面積の外接矩形を描画
         if -1 < MaxNo:
+            # 更新
+            self.blue_center_S = MaxS            
             i = MaxNo
             x0 = data[i][0]              
             y0 = data[i][1]              
@@ -110,14 +116,16 @@ class cImgProc():
             cv2.line(self.blue_img, (self.blue_center, 0), (self.blue_center, h/8), (255,255,255), 1)
         else:
             #情報を格納
-            self.blue_center = -1            
+            self.blue_center = -1
+            self.blue_center_depth = 0
+            self.blue_center_S = 0                            
 
         # -------------------------------------------------------------------------------------
         # Greenのmask領域で最も大きい領域を抽出し、self.green_centerに重心のx座標を格納(無は-1)
         # -------------------------------------------------------------------------------------
         # ラベリング参考: http://okkah.hateblo.jp/entry/2018/08/02/163045        
         MaxNo = -1  #初期番号
-        MaxS  = 8  #初期面積
+        MaxS  = 1  #初期面積 origin:8
         # Blueのmaskをラベリング
         label = cv2.connectedComponentsWithStats(self.green_mask)
         # オブジェクト毎に情報抽出
@@ -134,7 +142,10 @@ class cImgProc():
                 MaxS  = s
         # 最大面積の外接矩形を描画
         if -1 < MaxNo:
+            # 更新
+            self.green_center_S = MaxS
             i = MaxNo
+
             x0 = data[i][0]              
             y0 = data[i][1]              
             x1 = data[i][0] + data[i][2] 
@@ -148,7 +159,9 @@ class cImgProc():
             cv2.line(self.green_img, (self.green_center, 0), (self.green_center, h/8), (255,255,255), 1)
         else:
             #情報を格納
-            self.green_center = -1 
+            self.green_center = -1
+            self.green_center_depth = 0
+            self.green_center_S = 0            
 
         # -------------------------------------------------------------------------------------
         # Redのmask領域で最も大きい領域を抽出し、self.red_centerに重心のx座標を格納(無は-1)
@@ -172,6 +185,8 @@ class cImgProc():
                 MaxS  = s
         # 最大面積の外接矩形を描画
         if -1 < MaxNo:
+            # 更新
+            self.red_center_S = MaxS            
             i = MaxNo
             x0 = data[i][0]              
             y0 = data[i][1]              
@@ -187,6 +202,8 @@ class cImgProc():
         else:
             #情報を格納
             self.red_center = -1 
+            self.red_center_depth = 0
+            self.red_center_S = 0                 
 
         # -------------------------------------------------------------------------------------
         # self.blue_center、self.green_center、self.red_centerの状態をrila画像に枠描画

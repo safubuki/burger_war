@@ -133,41 +133,103 @@ class RirakkumaBot():
         twist.angular.x = 0; twist.angular.y = 0; twist.angular.z = th
         return twist
 
-    def calcTwist_center(self, center, depth):
+    def calcTwist_center(self, center, depth, S):
+        #depth [m]
+        if center != -1:
+            val = int(center / 16) #centerを0-4の10段階に
+            # --- 近距離 --------------------------------
+            if 0.3 > depth:
+            #if 100 < S:  
+                x  =  -0.2
+                th =  0.0
+            # --- 中距離 --------------------------------
+            elif 0.6 > depth:
+                if   val == 4:
+                    x  =  0.0
+                    th = -0.2
+
+                elif val == 3:
+                    x  =  0.1
+                    th = -0.1
+
+                elif val == 2:
+                    x = 0.0
+                    th =  0.0
+
+                elif val == 1:
+                    x  =  0.1
+                    th =  0.1
+
+                else:
+                    x  =  0.0
+                    th =  0.2
+            # --- 遠距離 ---------------------------------------                
+            #elif 1.0 > depth:
+            else :         
+                if   val == 4:
+                    x  =  0.0
+                    th = -0.2
+
+                elif val == 3:
+                    x  =  0.1
+                    th = -0.1
+
+                elif val == 2:
+                    x = 0.15
+                    th =  0.0
+
+                elif val == 1:
+                    x  =  0.1
+                    th =  0.1
+
+                else:
+                    x  =  0.0
+                    th =  0.2
+            # else:
+            #     x=0.0
+            #     th=0.0
+        # --- no detect green
+        else :
+            x  = 0
+            th = 0 
+
+        '''
         if center != -1:
             val = int(center / 16) #centerを0-4の10段階に
             if   val == 4:
-                x  =  0.2
-                th = -0.2 
+                x  =  0.0
+                th = -0.2
 
             elif val == 3:
-                x  =  0.2
+                x  =  0.1
                 th = -0.1
 
             elif val == 2:
                 if depth   < 0.3:
-                    x = 0.00
+                    x = -0.15
                 elif depth < 0.5:
-                    x = 0.04
+                    x = -0.1
                 elif depth < 0.7:
-                    x = 0.08      
+                    x = 0.0      
                 elif depth < 0.9:
-                    x = 0.12                                   
+                    x = 0.1                                 
                 else:
-                    x = 0.20
+                    x = 0.15
 
                 th =  0.0
 
             elif val == 1:
-                x  =  0.2
+                x  =  0.1
                 th =  0.1
 
             else:
-                x  =  0.2
+                x  =  0.0
                 th =  0.2
         else :
             x  = 0
             th = 0 
+       '''
+
         # 更新
         print("blue detect x,th=", x, th)
         twist = Twist()
@@ -298,9 +360,12 @@ class RirakkumaBot():
         rospy.sleep(1.0)  # 起動後、ウェイト（調整値）
         while not rospy.is_shutdown():
             if(self.proc.green_center != -1):
+                print("detect green")
                 self.client.cancel_goal()
-                twist = self.calcTwist_center(self.proc.green_center, self.proc.center_depth)
-                #print(twist)
+                twist = self.calcTwist_center(self.proc.green_center, self.proc.green_center_depth, self.proc.green_center_S)
+                print("#################### green_S_depth ####################")
+                print(self.proc.green_center_S, "-", self.proc.green_center_depth)
+                print("#######################################################")                
                 self.vel_pub.publish(twist)
                 print("snipe_enemy")
             elif self.move_state == MoveState.STOP:
@@ -376,141 +441,7 @@ class RirakkumaBot():
         # else:
         #     green_distance = 0
 
-    # Add ImageProcessing --- END ---
-
-    # Add
-        # # 緑の検出
-        # hsv_img = cv2.cvtColor(self.img, cv2.COLOR_BGR2HSV_FULL)
-        # bgrLower = np.array([80, 50, 50])
-        # bgrUpper = np.array([110, 255, 255])
-        # hsv_mask = cv2.inRange(hsv_img, bgrLower, bgrUpper)
-        # rects = []
-        # labels, contours, hierarchy = cv2.findContours(hsv_mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
-        # for i in range(0, len(contours)):
-        #     if len(contours[i]) > 0:
-
-        #         rect = contours[i]
-        #         x, y, w, h = cv2.boundingRect(rect)
-        #         rects.append([x,y,w,h])
-        # #print(rects)
-        # if len(rects) != 0:
-        #     if(self.greenflag ==0):
-        #         self.greenflag = 1
-        #         # rectsから緑全体をもってくる
-        #         Max_left = 640.0
-        #         Max_right = 0.0
-        #         for i in rects:
-        #             if (i[0] - (i[2] / 2.0)) <= Max_left:
-        #                 Max_left = (i[0] - (i[2] / 2.0))
-        #             if (i[0] + (i[2] / 2.0)) >= Max_right:
-        #                 Max_right = (i[0] + (i[2] / 2.0))
-        #         #print(Max_left)
-        #         #print(Max_right)
-        #         angle_left = (Max_left - (camera_width / 2.0)) * (camera_fov / camera_width)
-        #         angle_right = (Max_right - (camera_width / 2.0)) * (camera_fov / camera_width)
-
-        #         angle_adjust = (angle_left + angle_right) / 2.0
-                
-        #         # robot正面から何度の方向に緑の物体が存在するか計算
-        #         angle = (rects[0][0] - (camera_width / 2.0)) * (camera_fov / camera_width)
-        #         print("#####角度#####")
-        #         print(angle)
-        #         print(angle_adjust)
-        #         # rectの大きさまで考慮する必要ありか？
-        #         # lidarの点群からおおよその距離を算出
-        #         # if angle >= 0:
-        #         #     distance = self.scan.ranges[int(angle)]
-        #         # else:
-        #         #     distance = self.scan.ranges[int(359 + angle)]
-
-        #         if angle_adjust >= 0:
-        #             distance = self.scan.ranges[int(angle_adjust)]
-        #         else:
-        #             distance = self.scan.ranges[int(359 + angle_adjust)]
-        #         print("#####距離#####")
-        #         print(distance)
-        #         # robotから見た座標値を算出　前がx軸、左がy軸
-        #         # robot_x = math.cos(math.radians(angle)) * distance
-        #         # robot_y = -math.sin(math.radians(angle)) * distance
-
-        #         robot_x = math.cos(math.radians(angle_adjust)) * distance
-        #         robot_y = -math.sin(math.radians(angle_adjust)) * distance
-
-        #         print("#####x軸######")
-        #         print(robot_x)
-        #         print("#####y軸######")
-        #         print(robot_y)
-                
-        #         ######要修正######
-                
-        #         # 地図座標系に変換
-        #         #listener = tf.TransformListener()
-        #         #listener.waitForTransform("/red_bot/map","/red_bot/base_footprint",rospy.Time(0),rospy.Duration(4.0))
-        #         laser_point = PointStamped()
-        #         laser_point.header.frame_id = "/red_bot/base_link"
-        #         laser_point.header.stamp = rospy.Time(0)
-        #         laser_point.point.x = robot_x
-        #         laser_point.point.y = robot_y
-        #         laser_point.point.z = 0.0
-        #         p = PointStamped()
-        #         p = self._tf_listener.transformPoint("/red_bot/map", laser_point)
-        #         # 方向と位置をゴールとして指定
-        #         # 一旦方向は無視して位置でデバッグ
-        #         print("#####x_map#####")
-        #         print(p.point.x)
-        #         print("#####y_map#####")
-        #         print(p.point.y)
-        #         #self.setGoal(p.point.x,p.point.y,0)
-        #         marker_data = Marker()
-        #         marker_data.header.frame_id = "/red_bot/map"
-        #         marker_data.header.stamp = rospy.Time.now()
-        #         marker_data.ns = "text"
-        #         marker_data.id = 0
-        #         marker_data.action = Marker.ADD
-        #         marker_data.type = 9
-        #         marker_data.text = "Enemy"
-        #         marker_data.pose.position.x = p.point.x
-        #         marker_data.pose.position.y = p.point.y
-        #         marker_data.pose.position.z = 0.0
-        #         marker_data.pose.orientation.x = 0.0
-        #         marker_data.pose.orientation.y = 0.0
-        #         marker_data.pose.orientation.z = 0.0
-        #         marker_data.pose.orientation.w = 0.0
-        #         marker_data.color.r = 1.0
-        #         marker_data.color.g = 0.0
-        #         marker_data.color.b = 0.0
-        #         marker_data.color.a = 1.0
-        #         marker_data.scale.x = 1.0
-        #         marker_data.scale.y = 0.1
-        #         marker_data.scale.z = 0.1
-        #         self.marker_pub.publish(marker_data)
-
-        #         # Goal Setting
-        #         goal = PoseStamped()
-        #         #goal.header.seq = self.goal_seq_no
-        #         goal.header.frame_id = self.name + "/map"         # mapで座標系で指定する
-        #         goal.header.stamp = rospy.Time.now()       # タイムスタンプは今の時間
-
-        #         # ** 位置座標
-        #         goal.pose.position.x = p.point.x
-        #         goal.pose.position.y = p.point.y
-        #         goal.pose.position.z = 0
-        #         # ** 回転方向
-        #         # オイラー角をクォータニオンに変換・設定する
-        #         # RESPECT @hotic06 オイラー角をクォータニオンに変換・設定する
-        #         #euler_val = self.orientstr_to_val(pos_list[2])
-        #         #quate = tf.transformations.quaternion_from_euler(0.0, 0.0, euler_val)
-        #         goal.pose.orientation.x = 0
-        #         goal.pose.orientation.y = 0
-        #         goal.pose.orientation.z = 0
-        #         goal.pose.orientation.w = 1.0
-        #         # debug
-        #         print(goal)
-        #         # 実際にTopicを配信する
-        #         self.pub_goal.publish(goal)
-
-
-    
+    # Add ImageProcessing --- END ---    
 
 if __name__ == "__main__":
     rospy.init_node('rirakkuma_node')
