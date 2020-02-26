@@ -8,7 +8,7 @@
 
 <!-- enemy bot run  blue side-->
   <group ns="enemy_bot">
-    <node pkg="burger_war" type="enemy.py" name="enemyRun" output="screen"/>
+    <node pkg="burger_war" type="level_1_cheese.py" name="cheeseRun" output="screen"/>
   </group>
 
 </launch>
