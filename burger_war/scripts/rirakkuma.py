@@ -59,13 +59,10 @@ class MoveState():
     DEFENSE      = 2
 
 class RirakkumaBot():
-    def __init__(self, bot_name):
+    def __init__(self, bot_name="NoName"):
         ### Parameter Settings
         # bot name 
-        # RESPECT @hotic06 ロボット名の取得の仕方
-        robot_name=rospy.get_param('~robot_name')
-        self.name = robot_name
-        print(self.name)    #debug
+        self.name = bot_name
 
         # State
         self.move_state      = MoveState.STOP   # 移動状態           ：停止
@@ -331,7 +328,7 @@ class RirakkumaBot():
         # Goal Setting
         goal = PoseStamped()
         goal.header.seq = self.goal_seq_no
-        goal.header.frame_id = self.name + "/map"         # mapで座標系で指定する
+        goal.header.frame_id = "/map"              # mapで座標系で指定する
         goal.header.stamp = rospy.Time.now()       # タイムスタンプは今の時間
 
         self.goal_seq_no += 1                      # シーケンス番号を更新
