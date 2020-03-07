@@ -164,43 +164,6 @@ class RirakkumaBot():
             x  = 0
             th = 0 
 
-        '''
-        if center != -1:
-            val = int(center / 16) #centerを0-4の10段階に
-            if   val == 4:
-                x  =  0.0
-                th = -0.2
-
-            elif val == 3:
-                x  =  0.1
-                th = -0.1
-
-            elif val == 2:
-                if depth   < 0.3:
-                    x = -0.15
-                elif depth < 0.5:
-                    x = -0.1
-                elif depth < 0.7:
-                    x = 0.0      
-                elif depth < 0.9:
-                    x = 0.1                                 
-                else:
-                    x = 0.15
-
-                th =  0.0
-
-            elif val == 1:
-                x  =  0.1
-                th =  0.1
-
-            else:
-                x  =  0.0
-                th =  0.2
-        else :
-            x  = 0
-            th = 0 
-       '''
-
         # 更新
         print("blue detect x,th=", x, th)
         twist = Twist()
