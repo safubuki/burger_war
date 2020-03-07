@@ -104,32 +104,6 @@ class RirakkumaBot():
 
         self.client = actionlib.SimpleActionClient('move_base',MoveBaseAction)
 
-
-    def calcTwist_rand(self):
-        value = random.randint(1,1000)
-        if value < 250:
-            x = 0.2
-            th = 0
-        elif value < 500:
-            x = -0.2
-            th = 0
-        elif value < 750:
-            x = 0
-            th = 1
-        elif value < 1000:
-            x = 0
-            th = -1
-        else:
-            x = 0
-            th = 0
-
-        # 更新
-        print("random x,th=", x, th)    
-        twist = Twist()
-        twist.linear.x = x; twist.linear.y = 0; twist.linear.z = 0
-        twist.angular.x = 0; twist.angular.y = 0; twist.angular.z = th
-        return twist
-
     def calcTwist_center(self, center, depth, S):
         #depth [m]
         if center != -1:
@@ -233,41 +207,6 @@ class RirakkumaBot():
         twist.linear.x = x; twist.linear.y = 0; twist.linear.z = 0
         twist.angular.x = 0; twist.angular.y = 0; twist.angular.z = th
         return twist
-        '''
-        def calcTwist(self):
-            # --------------------------------------------------------
-            # Control Function by ImageProcessing
-            # ----------------------------------------------------------
-            # ①青重心座標[有:0-79、 無:-1] self.proc.blue_center  
-            # ②緑重心座標[有:0-79、 無:-1] self.proc.green_center        
-            # ③赤重心座標[有:0-79、 無:-1] self.proc.red_center
-            # ④中央(±10度)の平均距離  [m] self.proc.center_depth
-            # ①〜④の情報を使って制御を書く事
-
-            # 青領域検出
-            if self.proc.blue_center != -1:
-                return self.calcTwist_center(self.proc.blue_center, self.proc.center_depth)
-
-            # ランダム走行
-            else:
-                return self.calcTwist_rand()  
-
-        # main function
-        def strategy(self):
-            r = rospy.Rate(1) # change speed 1fps
-
-            target_speed = 0
-            target_turn = 0
-            control_speed = 0
-            control_turn = 0
-
-            while not rospy.is_shutdown():
-                twist = self.calcTwist()
-                #print(twist)
-                self.vel_pub.publish(twist)
-
-                r.sleep()          
-        '''            
 
     # CSVファイルから座標を取得する関数
     def csv_data(self):
