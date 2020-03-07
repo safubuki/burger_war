@@ -95,13 +95,6 @@ class RirakkumaBot():
         self.proc = cImgProc()
         # Add ImageProcessing --- END ---
 
-        # tf
-        #self._tf_listener = tf.TransformListener()
-        # Marker
-        #self.marker_pub = rospy.Publisher('enemy_position', Marker, queue_size = 1)
-        # greenflag
-        #self.greenflag = 0
-
         self.client = actionlib.SimpleActionClient('move_base',MoveBaseAction)
 
     def calcTwist_center(self, center, depth, S):
