@@ -318,12 +318,14 @@ class RirakkumaBot():
             print(e)
             return
 
-        if self.proc.debug_view == 1:
+        # Show camera window
+        if self.proc.debug_view == 1:           
             cv2.imshow("Camera", self.proc.img_div2)            
             cv2.waitKey(1)
 
+        # Show debug window
         if self.proc.debug_view == 2:
-            #cv2.imshow('rila', self.proc.rila_img)
+            #cv2.imshow("rila", self.proc.rila_img)
             #cv2.imshow("div2", self.proc.img_div2)            
             #cv2.imshow("div8", self.proc.img_div8)
             #cv2.imshow("red", self.proc.red_img)
@@ -331,6 +333,10 @@ class RirakkumaBot():
             #cv2.imshow("blue", self.proc.blue_img)                        
             #cv2.imshow("Camera", self.proc.img)            
             cv2.imshow("debug1", self.proc.debug1_img)                        
+            # --- add T.Ishigami 2020.03.15 22:40 ---
+            # Add window position for FullHD
+            cv2.moveWindow("debug1", 0, 820)
+
             cv2.waitKey(1)
         # green_index = self.proc.green_center
         # if green_index != -1:
