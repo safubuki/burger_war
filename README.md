@@ -1,3 +1,59 @@
+# リラックマ独自追加
+**1. ROS(kinetic)のインストール**   
+```
+chmod +x 01_install_ros_kinetic.sh
+./01_install_ros_kinetic.sh
+```
+
+**2. burger_warの環境構築**   
+```
+# 02_setup.sh内のgit clone先を事前に変更しておく
+chmod +x 02_setup.sh
+./02_setup.sh
+```
+
+**3. aliasの設定**
+```
+gedit ~/.bashrc
+```
+で以下を追加
+```
+# ROS全般コマンド  
+alias cw='cd ~/catkin_ws'
+alias cs='cd ~/catkin_ws/src'
+alias cm='cd ~/catkin_ws && catkin_make'
+# robocon2019用コマンド  
+alias bw='cd ~/catkin_ws/src/burger_war'
+alias sim='cd ~/catkin_ws/src/burger_war && bash scripts/sim_with_judge.sh'
+alias start='cd ~/catkin_ws/src/burger_war && bash scripts/start.sh'
+alias start_cheese='cd ~/catkin_ws/src/burger_war && bash scripts/start_cheese.sh'
+alias start_teriyaki='cd ~/catkin_ws/src/burger_war && bash scripts/start_teriyaki.sh'
+# robot位置がリセット。↑のstartで再スタート  
+alias reset='rosservice call /gazebo/reset_simulation "{}"' 
+```
+
+**4. gazeboの最新アップデート**  
+ 
+ ubuntu 16.04でインストールしたROS(kinetic)はgazeboに不具合があるため、ver7にアップデートすることをお勧め(7.15までアップデート可能)   
+ ・[ROS環境で最新のGazeboを取](https://scnsh.hatenablog.com/entry/2018/03/04/183800)   
+ ・[slackログインできるなら](https://roboticshubchallenge.slack.com/archives/CL9TFG2RZ/p1564533784053800?thread_ts=1564533261.050300&cid=CL9TFG2RZ)   
+```
+sudo sh -c 'echo "deb http://packages.osrfoundation.org/gazebo/ubuntu-stable `lsb_release -cs` main" > /etc/apt/sources.list.d/gazebo-stable.list'
+wget http://packages.osrfoundation.org/gazebo.key -O - | sudo apt-key add -
+sudo apt-get update
+sudo apt-get upgrade
+```
+**5. navigationを利用**  
+
+・~/.bashrcに以下を追加   
+  ```
+  export GAZEBO_MODEL_PATH=$HOME/catkin_ws/src/burger_war/burger_war/models/
+  ```
+  ・以下をインストール   
+  ```
+sudo apt-get install ros-kinetic-joy ros-kinetic-teleop-twist-joy ros-kinetic-teleop-twist-keyboard ros-kinetic-laser-proc ros-kinetic-rgbd-launch ros-kinetic-depthimage-to-laserscan  ros-kinetic-rosserial-arduino ros-kinetic-rosserial-python ros-kinetic-rosserial-server ros-kinetic-rosserial-client ros-kinetic-rosserial-msgs ros-kinetic-amcl ros-kinetic-map-server ros-kinetic-move-base ros-kinetic-urdf ros-kinetic-xacro ros-kinetic-compressed-image-transport ros-kinetic-rqt-image-view ros-kinetic-gmapping ros-kinetic-navigation ros-kinetic-interactive-markers  
+  ```
+
 # burger_war
 ロボットで戦車対戦をするゲームです。
 大砲で撃つ代わりに、カメラでターゲットのARマーカーを読み取ります。<BR>
