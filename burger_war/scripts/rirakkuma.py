@@ -310,8 +310,13 @@ class RirakkumaBot():
             print(e)
 
         # image processing
-        self.proc.imageProcess1(self.img, self.scan)
-        #print('cwd=', self.proc.cwd)
+        # liderCallbackより先にimageCallbackがコールされIndexError例外に対応
+        try:
+            self.proc.imageProcess1(self.img, self.scan)
+            #print('cwd=', self.proc.cwd)
+        except IndexError as e:
+            print(e)
+            return
 
         if self.proc.debug_view == 1:
             cv2.imshow("Camera", self.proc.img_div2)            
