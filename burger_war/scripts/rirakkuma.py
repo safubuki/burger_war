@@ -54,13 +54,10 @@ from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 
 # PythonでEnum的なことを実現
 class MainState():
-    STOP         = 0
-    EXEC_ACTION  = 1
-    MOVING       = 2
-    HUNTING      = 3
-    #TODO Delete Code
-    # RUN          = 1
-    # DEFENSE      = 2
+    STOP         = 0    # 停止
+    EXEC_ACTION  = 1    # アクション実行
+    MOVING       = 2    # 移動
+    HUNTING      = 3    # 追跡
 
 class RirakkumaBot():
     def __init__(self, bot_name="NoName"):
@@ -80,7 +77,7 @@ class RirakkumaBot():
 
         # Flags
         # 初期化フラグ
-        self.initialize_flg = False
+        self.initialize_flg   = False
         # ゴール到着フラグ
         self.goal_arrival_flg = False
 
@@ -195,14 +192,8 @@ class RirakkumaBot():
     # "move_base/result" TopicをSubscribeしたときのコールバック関数
     # ゴール座標への到達を検知
     def result_callback(self,goal_result):
-        print('result_callback')    # ★★デバッグ
-        print(goal_result)          # ★★デバッグ
         if goal_result.status.status == 3:  # ゴールに到着 (★失敗時のAbort:4も対応する)
             self.goal_arrival_flg = True
-
-            #TODO Delete Code
-            # if self.main_state == MainState.RUN:
-            #     self.main_state = MainState.STOP         # 移動状態を更新：停止
 
     ### cmd_vel パラメータ設定＆Topic Publish関数 ※その場旋回用
     def vel_ctrl(self, line_x, line_y, ang_z):
@@ -262,65 +253,82 @@ class RirakkumaBot():
         # 実際にTopicを配信する
         self.pub_goal.publish(goal)
 
+    def func_state_stop(self):
+        # 初期処理未実施なら、次状態はEXEC_ACTION
+        if self.initialize_flg == False:
+            self.initialize_flg = True
+            self.next_state     = MainState.EXEC_ACTION
+
+    def func_state_exec_action(self):
+        # アクションリストを読み込み
+        pos_info         = self.c_data[self.c_data_cnt]
+        self.c_data_cnt += 1 
+        # アクションリストに基づいてアクション
+        if pos_info[3]   == "way_point":
+            # 目的地に移動 (次状態はMOVING)
+            self.simple_goal_publish(pos_info)
+            self.next_state = MainState.MOVING
+        elif pos_info[3] == "turn_r_45": 
+            # 右45度旋回   (状態維持)
+            self.vel_ctrl(0,0,-math.pi/4)
+        elif pos_info[3] == "turn_l_45": 
+            # 左45度旋回   (状態維持)
+            self.vel_ctrl(0,0,math.pi/4) 
+        else:
+            # 意図しないアクションの場合は次のリスト
+            pass
+
+        # 敵を見つけたら、次状態はHUNTING
+        if self.proc.green_center != -1:
+            self.prev_next_state = self.next_state
+            self.next_state      = MainState.HUNTING
+
+    def func_state_moving(self):
+        # 目的地に到着したら、次状態はEXEC_ACTION
+        if self.goal_arrival_flg == True:
+            self.goal_arrival_flg = False
+            self.next_state       = MainState.EXEC_ACTION
+
+        # 敵を見つけたら、次状態はHUNTING
+        if self.proc.green_center != -1:
+            self.prev_next_state  = self.next_state
+            self.next_state       = MainState.HUNTING
+
+    def func_state_hunting(self):
+        # 敵の追跡を実行
+        print("detect green")
+        self.client.cancel_goal()
+        twist = self.calcTwist_center(self.proc.green_center, self.proc.green_center_depth, self.proc.green_center_S)
+        print("#################### green_S_depth ####################")
+        print(self.proc.green_center_S, "-", self.proc.green_center_depth)
+        print("#######################################################")                
+        self.vel_pub.publish(twist)
+        print("snipe_enemy")
+
+        # 敵を見失ったらHUNTING状態になる前の次状態に遷移
+        if self.proc.green_center == -1:
+            self.next_state = self.prev_next_state
+
     # ロボット動作のメイン処理
     def strategy(self):
         while not rospy.is_shutdown():
+            # ステートマシン処理
             if self.main_state == MainState.STOP:
-                # 初期化未実施ならアクション実行状態に遷移
-                if self.initialize_flg == False:
-                    self.initialize_flg = True
-                    self.next_state = MainState.EXEC_ACTION
-
+                # 停止
+                self.func_state_stop()
             elif self.main_state == MainState.EXEC_ACTION:
-                # アクションリストを読み込み
-                pos_info = self.c_data[self.c_data_cnt]
-                self.c_data_cnt += 1 
-                # アクションリストに基づいた処理を実施
-                if pos_info[3] == "way_point":
-                    # 目的地に移動
-                    self.simple_goal_publish(pos_info)
-                    self.next_state = MainState.MOVING
-                elif pos_info[3] == "turn_r_45": 
-                    # 右旋回（45°）
-                    self.vel_ctrl(0,0,-math.pi/4)
-                elif pos_info[3] == "turn_l_45": 
-                    # 左旋回（45°）
-                    self.vel_ctrl(0,0,math.pi/4) 
-                else:
-                    # 意図しないアクションの場合は次のリストへ
-                    pass
-                # 敵を見つけたら追跡状態に遷移
-                if self.proc.green_center != -1:
-                    self.prev_next_state = self.next_state
-                    self.next_state = MainState.HUNTING
-
+                # アクション実行
+                self.func_state_exec_action()
             elif self.main_state == MainState.MOVING:
-                # 目的地に到着したらアクション実行状態に遷移
-                if self.goal_arrival_flg == True:
-                    self.goal_arrival_flg = False
-                    self.next_state = MainState.EXEC_ACTION
-                # 敵を見つけたら追跡状態に遷移
-                if self.proc.green_center != -1:
-                    self.prev_next_state = self.next_state
-                    self.next_state = MainState.HUNTING
-
+                # 移動
+                self.func_state_moving()
             elif self.main_state == MainState.HUNTING:
-                # 敵の追跡処理を実行
-                print("detect green")
-                self.client.cancel_goal()
-                twist = self.calcTwist_center(self.proc.green_center, self.proc.green_center_depth, self.proc.green_center_S)
-                print("#################### green_S_depth ####################")
-                print(self.proc.green_center_S, "-", self.proc.green_center_depth)
-                print("#######################################################")                
-                self.vel_pub.publish(twist)
-                print("snipe_enemy")
-                # 敵を見失ったら追跡状態になる前の次状態に遷移
-                if self.proc.green_center == -1:
-                    self.next_state = self.prev_next_state
+                # 追跡
+                self.func_state_hunting()
             else:
                 pass
 
-            # 処理が終わったら、次状態をメイン状態に設定
+            # メイン状態を次の状態に更新
             self.main_state = self.next_state
             # 1秒Wait
             rospy.sleep(1)
