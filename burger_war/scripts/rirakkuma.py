@@ -53,10 +53,14 @@ from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 
 
 # PythonでEnum的なことを実現
-class MoveState():
+class MainState():
     STOP         = 0
-    RUN          = 1
-    DEFENSE      = 2
+    EXEC_ACTION  = 1
+    MOVING       = 2
+    HUNTING      = 3
+    #TODO Delete Code
+    # RUN          = 1
+    # DEFENSE      = 2
 
 class RirakkumaBot():
     def __init__(self, bot_name="NoName"):
@@ -65,12 +69,20 @@ class RirakkumaBot():
         self.name = bot_name
 
         # State
-        self.move_state      = MoveState.STOP   # 移動状態           ：停止
+        self.main_state      = MainState.STOP   # メイン状態
+        self.next_state      = MainState.STOP   # 次状態
+        self.prev_next_state = MainState.STOP   # 前回次状態
         # CSV ファイルから取り出したデータ保存用リスト
         self.c_data          = []               # csvデータ
         self.c_data_cnt      = 0                # csvデータ順次取得のためのカウンタ
         # simple/goal用のシーケンス番号 ※これ無いとエラーになるため必要
         self.goal_seq_no     = 0
+
+        # Flags
+        # 初期化フラグ
+        self.initialize_flg = False
+        # ゴール到着フラグ
+        self.goal_arrival_flg = False
 
         ### Publisher を ROS Masterに登録
         # Velocity
@@ -78,7 +90,8 @@ class RirakkumaBot():
         self.pub_goal        = rospy.Publisher('move_base_simple/goal', PoseStamped, queue_size=1, latch=True)
         ### Subscriber を ROS Masterに登録
         self.sub_goal_result = rospy.Subscriber("move_base/result", MoveBaseActionResult, self.result_callback, queue_size=1)
-                # Add ImageProcessing --- START ---
+        
+        # Add ImageProcessing --- START ---
         # lidar scan subscriber
         self.scan = LaserScan()
         self.lidar_sub = rospy.Subscriber('scan', LaserScan, self.lidarCallback)
@@ -185,8 +198,11 @@ class RirakkumaBot():
         print('result_callback')    # ★★デバッグ
         print(goal_result)          # ★★デバッグ
         if goal_result.status.status == 3:  # ゴールに到着 (★失敗時のAbort:4も対応する)
-            if self.move_state == MoveState.RUN:
-                self.move_state = MoveState.STOP         # 移動状態を更新：停止
+            self.goal_arrival_flg = True
+
+            #TODO Delete Code
+            # if self.main_state == MainState.RUN:
+            #     self.main_state = MainState.STOP         # 移動状態を更新：停止
 
     ### cmd_vel パラメータ設定＆Topic Publish関数 ※その場旋回用
     def vel_ctrl(self, line_x, line_y, ang_z):
@@ -248,10 +264,48 @@ class RirakkumaBot():
 
     # ロボット動作のメイン処理
     def strategy(self):
-        # 起動直後ウェイト
-        rospy.sleep(1.0)  # 起動後、ウェイト（調整値）
         while not rospy.is_shutdown():
-            if(self.proc.green_center != -1):
+            if self.main_state == MainState.STOP:
+                # 初期化未実施ならアクション実行状態に遷移
+                if self.initialize_flg == False:
+                    self.initialize_flg = True
+                    self.next_state = MainState.EXEC_ACTION
+
+            elif self.main_state == MainState.EXEC_ACTION:
+                # アクションリストを読み込み
+                pos_info = self.c_data[self.c_data_cnt]
+                self.c_data_cnt += 1 
+                # アクションリストに基づいた処理を実施
+                if pos_info[3] == "way_point":
+                    # 目的地に移動
+                    self.simple_goal_publish(pos_info)
+                    self.next_state = MainState.MOVING
+                elif pos_info[3] == "turn_r_45": 
+                    # 右旋回（45°）
+                    self.vel_ctrl(0,0,-math.pi/4)
+                elif pos_info[3] == "turn_l_45": 
+                    # 左旋回（45°）
+                    self.vel_ctrl(0,0,math.pi/4) 
+                else:
+                    # 意図しないアクションの場合は次のリストへ
+                    pass
+                # 敵を見つけたら追跡状態に遷移
+                if self.proc.green_center != -1:
+                    self.prev_next_state = self.next_state
+                    self.next_state = MainState.HUNTING
+
+            elif self.main_state == MainState.MOVING:
+                # 目的地に到着したらアクション実行状態に遷移
+                if self.goal_arrival_flg == True:
+                    self.goal_arrival_flg = False
+                    self.next_state = MainState.EXEC_ACTION
+                # 敵を見つけたら追跡状態に遷移
+                if self.proc.green_center != -1:
+                    self.prev_next_state = self.next_state
+                    self.next_state = MainState.HUNTING
+
+            elif self.main_state == MainState.HUNTING:
+                # 敵の追跡処理を実行
                 print("detect green")
                 self.client.cancel_goal()
                 twist = self.calcTwist_center(self.proc.green_center, self.proc.green_center_depth, self.proc.green_center_S)
@@ -260,42 +314,16 @@ class RirakkumaBot():
                 print("#######################################################")                
                 self.vel_pub.publish(twist)
                 print("snipe_enemy")
-            elif self.move_state == MoveState.STOP:
-                pos_info = self.c_data[self.c_data_cnt]
-                if pos_info[3] == "way_point":
-                    self.c_data_cnt += 1                    # csvデータカウンタを更新
-                    self.simple_goal_publish(pos_info)      # 座標は後ほどCSVから取得できるように
-                    self.move_state = MoveState.RUN
-                    print("run")
-                elif pos_info[3] == "turn_r_45":         # ※突貫コード
-                    self.c_data_cnt += 1                    # csvデータカウンタを更新
-                    self.vel_ctrl(0,0,-math.pi/4)            # その場でターン
-                    print("r_45")
-                elif pos_info[3] == "turn_r_90":         # ※突貫コード
-                    self.c_data_cnt += 1                    # csvデータカウンタを更新
-                    self.vel_ctrl(0,0,-math.pi/2)            # その場でターン
-                    print("r_90")
-                elif pos_info[3] == "turn_l_45":         # ※突貫コード
-                    self.c_data_cnt += 1                    # csvデータカウンタを更新
-                    self.vel_ctrl(0,0,math.pi/4)            # その場でターン
-                    print("l_45")
-                elif pos_info[3] == "turn_l_90":         # ※突貫コード
-                    self.c_data_cnt += 1                    # csvデータカウンタを更新
-                    self.vel_ctrl(0,0,math.pi/2)            # その場でターン
-                    print("l_90")
-                elif pos_info[3] == "turn_wait":          # ※突貫コード
-                    self.c_data_cnt += 1                    # csvデータカウンタを更新
-                    self.vel_ctrl(0,0,0)                 # その場でターンしない
-                    print("turn_wait")
-                else:
-                    self.move_state = MoveState.DEFENSE
-                    pass
+                # 敵を見失ったら追跡状態になる前の次状態に遷移
+                if self.proc.green_center == -1:
+                    self.next_state = self.prev_next_state
             else:
                 pass
 
-            print('move_state')  # ★★デバッグ
-            print(self.move_state)
-            rospy.sleep(1)  # 1秒Wait
+            # 処理が終わったら、次状態をメイン状態に設定
+            self.main_state = self.next_state
+            # 1秒Wait
+            rospy.sleep(1)
 
     # Add ImageProcessing --- START ---
     def lidarCallback(self, data):
@@ -352,4 +380,5 @@ if __name__ == "__main__":
     rospy.init_node('rirakkuma_node')
     bot = RirakkumaBot('rirakkuma')
     bot.csv_data()
+    rospy.sleep(1.0)  # 起動後、ウェイト（調整値）
     bot.strategy()
