@@ -175,9 +175,8 @@ class RirakkumaBot():
         twist.angular.x = 0; twist.angular.y = 0; twist.angular.z = th
         return twist
 
-    # CSVファイルから座標を取得する関数
     def csv_data(self):
-        """csvデータをリストに格納する"""
+        """CSVファイルから座標を取得する"""
         # csvファイルをOpen
         csv_pass = os.path.dirname(__file__) + "/position_list.csv"
         csv_file = open(csv_pass, "r")
@@ -214,7 +213,6 @@ class RirakkumaBot():
             print("str_orient_error")
         return ret_val
 
-    ### cmd_vel パラメータ設定＆Topic Publish関数 ※旋回用
     def vel_ctrl(self, line_x, line_y, ang_z):
         """publisher：cmd_vel Topic用（旋回で使用）"""
         vel_msg = Twist()
@@ -223,7 +221,6 @@ class RirakkumaBot():
         vel_msg.angular.z = ang_z
         self.vel_pub.publish(vel_msg)
 
-    # "move_base_simple/goal"Topicのパラメータを設定し、Publishする関数 (引数はリスト型で渡す)
     def simple_goal_publish(self,pos_list):
         """publisher：move_base_simple/goal Topic用（引数はリスト型で渡す）"""
         # Goal Setting
@@ -366,7 +363,6 @@ class RirakkumaBot():
         if self.proc.green_center == -1:
             self.next_state = self.prev_next_state
 
-    # ロボット動作のメイン処理
     def strategy(self):
         """ロボット動作メイン処理（ステートマシンで制御）"""
         while not rospy.is_shutdown():
