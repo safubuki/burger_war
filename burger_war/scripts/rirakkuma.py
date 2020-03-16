@@ -334,8 +334,10 @@ class RirakkumaBot():
             #cv2.imshow("Camera", self.proc.img)            
             cv2.imshow("debug1", self.proc.debug1_img)                        
             # --- add T.Ishigami 2020.03.15 22:40 ---
-            # Add window position for FullHD
-            cv2.moveWindow("debug1", 0, 820)
+            # Add vertical window position for FullHD (1080 - 260 = 820)
+            # cv2.moveWindow("debug1", 0, 820)
+            # Add vertical window position for QVGA   ( 960 - 260 = 700)
+            cv2.moveWindow("debug1", 0, 700)
 
             cv2.waitKey(1)
         # green_index = self.proc.green_center
