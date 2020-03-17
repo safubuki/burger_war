@@ -273,7 +273,9 @@ class cImgProc():
             self.red_center_depth = float(self.depth_img.item(0, self.red_center, 0)) / 100
         else:
             self.red_center_depth = 0
-        print("b,g,r_depth =", self.blue_center_depth, self.green_center_depth, self.red_center_depth)                              
+        
+        # Debug
+        # print("b,g,r_depth =", self.blue_center_depth, self.green_center_depth, self.red_center_depth)                              
 
         # debug (中心付近に10x10の赤枠描画)
         cv2.rectangle(self.depth_img, (40-5,30-5), (40+5, 30+5), (0,0,255), 2)

@@ -60,6 +60,9 @@ class MainState():
     HUNTING      = 3    # 追跡
 
 class RirakkumaBot():
+    # クラス変数
+    HUNT_CNT_NUM = 1    # HUNTING(追跡)状態に遷移する待ち回数
+    
     def __init__(self, bot_name="NoName"):
         ### Parameter Settings
         # bot name 
@@ -74,6 +77,8 @@ class RirakkumaBot():
         self.c_data_cnt      = 0                # csvデータ順次取得のためのカウンタ
         # simple/goal用のシーケンス番号 ※これ無いとエラーになるため必要
         self.goal_seq_no     = 0
+        # HUNTING(追跡)移行カウンタ
+        self.hunting_cnt     = 0
 
         # Flags
         # 初期化フラグ
@@ -307,21 +312,27 @@ class RirakkumaBot():
     def is_start_hunting(self):
         """HUNTING(追跡)を開始するか判定する
 
-        敵を発見したら現状態を保持して、次状態をHUNTING(追跡)にする
+        ・敵を発見したら「HUNT_CNT_NUM」回数待つ
+        ・待ち回数を満たしたら現状態を保持して、次状態をHUNTING(追跡)にする
         
         戻り値  True：開始する/False：開始しない
         """
         if self.proc.green_center != -1:
-            self.prev_main_state = self.main_state
-            self.next_state      = MainState.HUNTING
-            return True
+            if self.hunting_cnt >= RirakkumaBot.HUNT_CNT_NUM:
+                self.prev_main_state = self.main_state
+                self.next_state      = MainState.HUNTING
+                return True
+            else:
+                self.hunting_cnt += 1
+        else:
+            self.hunting_cnt = 0
 
         return False
 
     def is_finish_hunting(self):
         """HUNTING(追跡)を終了するか判定する
 
-        敵を喪失したらHUNTING(追跡)状態に遷移する前状態に戻る
+        ・敵を喪失したらHUNTING(追跡)状態に遷移する前状態に戻る
         
         戻り値  True：終了する/False：終了しない
         """
@@ -410,6 +421,10 @@ class RirakkumaBot():
                 self.func_state_hunting()
             else:
                 pass
+
+            # DEBUG Print
+            print('main_state = ',self.main_state)
+            print('next_state = ',self.next_state)
 
             # メイン状態を次の状態に更新
             self.main_state = self.next_state
