@@ -343,12 +343,12 @@ class RirakkumaBot():
             # 目的地に移動 (次状態はMOVING)
             self.simple_goal_publish(pos_info)
             self.next_state = MainState.MOVING
-        elif pos_info[0] == "turn_right": 
-            # 右45度旋回   (状態維持)
-            self.vel_ctrl(0,0,-math.pi/4)
-        elif pos_info[0] == "turn_left": 
-            # 左45度旋回   (状態維持)
-            self.vel_ctrl(0,0,math.pi/4) 
+        elif pos_info[0] == "turn": 
+            # 旋回         (状態維持)
+            # 度数をラジアンに変換
+            degree_val = float(pos_info[3])
+            radian_val = math.radians(degree_val)
+            self.vel_ctrl(0,0,radian_val)
         else:
             # 意図しないアクションの場合は次のリスト
             pass
