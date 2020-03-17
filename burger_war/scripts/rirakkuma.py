@@ -195,29 +195,6 @@ class RirakkumaBot():
             # appendでリストに別のリストとして要素を追加する
             self.c_data.append(row)
 
-    def orientstr_to_val(self,str_orient):
-        """アクションリストの文字列をオイラー角に変換する"""
-        ret_val = 0.0
-        if str_orient == "up":
-            ret_val = 0.0
-        elif str_orient == "upright":
-            ret_val = -math.pi/4
-        elif str_orient == "right":
-            ret_val = -math.pi/2
-        elif str_orient == "downright":
-            ret_val = -math.pi*3/4
-        elif str_orient == "down":
-            ret_val = math.pi
-        elif str_orient == "downleft":
-            ret_val = math.pi*3/4
-        elif str_orient == "left":
-            ret_val = math.pi/2
-        elif str_orient == "upleft":
-            ret_val = math.pi/4
-        else:
-            print("str_orient_error")
-        return ret_val
-
     def vel_ctrl(self, line_x, line_y, ang_z):
         """publisher：cmd_vel Topic用（旋回で使用）"""
         vel_msg = Twist()
@@ -237,14 +214,16 @@ class RirakkumaBot():
         self.goal_seq_no += 1                      # シーケンス番号を更新
 
         # ** 位置座標
-        goal.pose.position.x = float(pos_list[0])
-        goal.pose.position.y = float(pos_list[1])
+        goal.pose.position.x = float(pos_list[1])
+        goal.pose.position.y = float(pos_list[2])
         goal.pose.position.z = 0
         # ** 回転方向
-        # オイラー角をクォータニオンに変換・設定する
+        # 度数をラジアンに変換
+        degree_val = float(pos_list[3])
+        radian_val = math.radians(degree_val)
+        # オイラー角をクォータニオンに変換
         # RESPECT @hotic06 オイラー角をクォータニオンに変換・設定する
-        euler_val = self.orientstr_to_val(pos_list[2])
-        quate = tf.transformations.quaternion_from_euler(0.0, 0.0, euler_val)
+        quate = tf.transformations.quaternion_from_euler(0.0, 0.0, radian_val)
         goal.pose.orientation.x = quate[0]
         goal.pose.orientation.y = quate[1]
         goal.pose.orientation.z = quate[2]
@@ -360,14 +339,14 @@ class RirakkumaBot():
         pos_info         = self.c_data[self.c_data_cnt]
         self.c_data_cnt += 1 
         # アクションリストに基づいてアクション
-        if pos_info[3]   == "way_point":
+        if pos_info[0]   == "move":
             # 目的地に移動 (次状態はMOVING)
             self.simple_goal_publish(pos_info)
             self.next_state = MainState.MOVING
-        elif pos_info[3] == "turn_r_45": 
+        elif pos_info[0] == "turn_right": 
             # 右45度旋回   (状態維持)
             self.vel_ctrl(0,0,-math.pi/4)
-        elif pos_info[3] == "turn_l_45": 
+        elif pos_info[0] == "turn_left": 
             # 左45度旋回   (状態維持)
             self.vel_ctrl(0,0,math.pi/4) 
         else:
