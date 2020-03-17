@@ -67,8 +67,8 @@ class RirakkumaBot():
 
         # State
         self.main_state      = MainState.STOP   # メイン状態
+        self.prev_main_state = MainState.STOP   # 前回メイン状態
         self.next_state      = MainState.STOP   # 次状態
-        self.prev_next_state = MainState.STOP   # 前回次状態
         # CSV ファイルから取り出したデータ保存用リスト
         self.c_data          = []               # csvデータ
         self.c_data_cnt      = 0                # csvデータ順次取得のためのカウンタ
@@ -303,6 +303,34 @@ class RirakkumaBot():
         # else:
         #     green_distance = 0
 
+
+    def is_start_hunting(self):
+        """HUNTING(追跡)を開始するか判定する
+
+        敵を発見したら現状態を保持して、次状態をHUNTING(追跡)にする
+        
+        戻り値  True：開始する/False：開始しない
+        """
+        if self.proc.green_center != -1:
+            self.prev_main_state = self.main_state
+            self.next_state      = MainState.HUNTING
+            return True
+
+        return False
+
+    def is_finish_hunting(self):
+        """HUNTING(追跡)を終了するか判定する
+
+        敵を喪失したらHUNTING(追跡)状態に遷移する前状態に戻る
+        
+        戻り値  True：終了する/False：終了しない
+        """
+        if self.proc.green_center == -1:
+            self.next_state = self.prev_main_state
+            return True
+
+        return False
+
     def func_state_stop(self):
         """状態処理関数：STOP(停止)"""
         # 初期処理未実施なら、次状態はEXEC_ACTION
@@ -312,6 +340,11 @@ class RirakkumaBot():
 
     def func_state_exec_action(self):
         """状態処理関数：EXEC_ACTION(アクション実行)"""
+        # HUNTING(追跡)を開始するか判定する
+        if self.is_start_hunting():
+            # 開始する場合、以降の処理はしない
+            return
+
         # アクションリストを読み込み
         pos_info         = self.c_data[self.c_data_cnt]
         self.c_data_cnt += 1 
@@ -330,25 +363,25 @@ class RirakkumaBot():
             # 意図しないアクションの場合は次のリスト
             pass
 
-        # 敵を見つけたら、次状態はHUNTING
-        if self.proc.green_center != -1:
-            self.prev_next_state = self.next_state
-            self.next_state      = MainState.HUNTING
-
     def func_state_moving(self):
         """状態処理関数：MOVING(移動)"""
+        # HUNTING(追跡)を開始するか判定する
+        if self.is_start_hunting():
+            # 開始する場合、以降の処理はしない
+            return
+
         # 目的地に到着したら、次状態はEXEC_ACTION
         if self.goal_arrival_flg == True:
             self.goal_arrival_flg = False
             self.next_state       = MainState.EXEC_ACTION
 
-        # 敵を見つけたら、次状態はHUNTING
-        if self.proc.green_center != -1:
-            self.prev_next_state  = self.next_state
-            self.next_state       = MainState.HUNTING
-
     def func_state_hunting(self):
         """状態処理関数：HUNTING(追跡)"""
+        # HUNTING(追跡)を終了するか判定する
+        if self.is_finish_hunting():
+            # 終了する場合、以降の処理は実施しない
+            return
+
         # 敵の追跡を実行
         print("detect green")
         self.client.cancel_goal()
@@ -358,10 +391,6 @@ class RirakkumaBot():
         print("#######################################################")                
         self.vel_pub.publish(twist)
         print("snipe_enemy")
-
-        # 敵を見失ったらHUNTING状態になる前の次状態に遷移
-        if self.proc.green_center == -1:
-            self.next_state = self.prev_next_state
 
     def strategy(self):
         """ロボット動作メイン処理（ステートマシンで制御）"""
