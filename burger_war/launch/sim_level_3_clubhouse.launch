@@ -19,11 +19,11 @@
     <!-- AMCL -->
     <node pkg="amcl" type="amcl" name="amcl">
       <param name="use_map_topic"             value="true"/>
-      <param name="min_particles"             value="300"/>
-      <param name="max_particles"             value="2000"/>
+      <param name="min_particles"             value="150"/>
+      <param name="max_particles"             value="500"/>
       <param name="kld_err"                   value="0.02"/>
-      <param name="update_min_d"              value="0.1"/>
-      <param name="update_min_a"              value="0.1"/>
+      <param name="update_min_d"              value="0.05"/>
+      <param name="update_min_a"              value="0.05"/>
       <param name="resample_interval"         value="1"/>
       <param name="transform_tolerance"       value="0.5"/>
       <param name="recovery_alpha_slow"       value="0.00"/>
@@ -61,8 +61,8 @@
       </node>
     </group>
     
-    <!-- teriyaki -->
-    <node pkg="burger_war" type="level_2_teriyaki.py" name="teriyakiRun" output="$(arg output)"/>
+    <!-- clubhouse -->
+    <node pkg="burger_war" type="level_3_clubhouse.py" name="clubhouseRun" output="$(arg output)"/>
 
 </launch>
 
