@@ -61,7 +61,7 @@ class MainState():
 
 class RirakkumaBot():
     # クラス変数
-    HUNT_CNT_NUM = 1    # HUNTING(追跡)状態に遷移する待ち回数
+    HUNT_CNT_NUM = 0    # HUNTING(追跡)状態に遷移する待ち回数 (2020.08.18 Wait無効)
     
     def __init__(self, bot_name="NoName"):
         ### Parameter Settings
